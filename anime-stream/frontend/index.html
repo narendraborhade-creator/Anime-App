@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIME STREAM</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <span class="logo-icon">▶</span>
+        <span class="logo-text">ANIME STREAM</span>
+      </div>
+      <div class="search-container">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search anime..."
+          autocomplete="off"
+        />
+        <button id="searchBtn" class="search-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </div>
+      <nav class="nav">
+        <a href="#" class="nav-link active">Home</a>
+        <a href="#" class="nav-link">Browse</a>
+        <a href="#" class="nav-link">My List</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Hero Section -->
+    <section class="hero" id="heroSection">
+      <div class="hero-content">
+        <h1 class="hero-title">Watch Anime Online</h1>
+        <p class="hero-subtitle">Stream the latest and greatest anime series</p>
+      </div>
+    </section>
+
+    <!-- Video Player Section (hidden by default) -->
+    <section class="player-section" id="playerSection" style="display: none;">
+      <div class="player-container">
+        <div class="player-header">
+          <button class="back-btn" id="backBtn">← Back</button>
+          <div class="now-playing">
+            <span class="now-playing-label">NOW PLAYING</span>
+            <span class="now-playing-title" id="nowPlayingTitle">-</span>
+          </div>
+        </div>
+        <div class="player-layout">
+          <div class="video-wrapper">
+            <video
+              id="videoPlayer"
+              controls
+              autoplay
+              class="video-player"
+            >
+              <source id="videoSource" src="" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <div class="video-overlay" id="videoOverlay">
+              <div class="play-icon">▶</div>
+              <p>Select an episode to start watching</p>
+            </div>
+          </div>
+          <div class="episode-panel">
+            <div class="episode-panel-header">
+              <h3 id="episodeAnimeTitle">Episodes</h3>
+              <span class="episode-count" id="episodeCount">0 episodes</span>
+            </div>
+            <div class="episode-list" id="episodeList">
+              <div class="loading-episodes">
+                <div class="spinner"></div>
+                <p>Loading episodes...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-section" id="contentSection">
+      <div class="section-header">
+        <h2 class="section-title" id="sectionTitle">🔥 Trending Now</h2>
+        <div class="section-controls">
+          <button class="filter-btn active" data-filter="airing">Airing</button>
+          <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+          <button class="filter-btn" data-filter="bypopularity">Popular</button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-container" id="loadingContainer">
+        <div class="loading-grid">
+          <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+        </div>
+        <div class="loading-text">
+          <div class="spinner large"></div>
+          <p>Loading anime...</p>
+        </div>
+      </div>
+
+      <!-- Anime Grid -->
+      <div class="anime-grid" id="animeGrid"></div>
+
+      <!-- No Results -->
+      <div class="no-results" id="noResults" style="display: none;">
+        <div class="no-results-icon">🔍</div>
+        <h3>No results found</h3>
+        <p>Try searching for something else</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2024 ANIME STREAM. Powered by Jikan API (MyAnimeList)</p>
+      <p class="footer-note">For demonstration purposes only. No actual streaming content is hosted.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
