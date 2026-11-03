@@ -35,17 +35,24 @@ app.get('/trending', async (req, res) => {
   }
 });
 
+// Security: Helper to validate positive numeric IDs to prevent path traversal / SSRF into upstream API
+const isValidAnimeId = (id) => typeof id === 'string' && /^[1-9]\d{0,9}$/.test(id.trim());
+
 // GET /search?q= - Search anime
 app.get('/search', async (req, res) => {
   const query = req.query.q;
-  if (!query) {
-    return res.status(400).json({ error: 'Query parameter q is required' });
+  // Security: Validate type and enforce max length to prevent DoS or abuse
+  if (typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ error: 'Query parameter q is required and must be non-empty' });
+  }
+  if (query.length > 100) {
+    return res.status(400).json({ error: 'Query parameter q cannot exceed 100 characters' });
   }
 
   try {
     const response = await axios.get(`${JIKAN_BASE}/anime`, {
       params: {
-        q: query,
+        q: query.trim(),
         limit: 20,
         sfw: true
       },
@@ -64,12 +71,13 @@ app.get('/search', async (req, res) => {
 // GET /episodes?id= - Fetch episodes for an anime
 app.get('/episodes', async (req, res) => {
   const id = req.query.id;
-  if (!id) {
-    return res.status(400).json({ error: 'Query parameter id is required' });
+  // Security: Validate anime ID to prevent upstream URL manipulation / path traversal
+  if (!id || !isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Query parameter id is required and must be a positive integer' });
   }
 
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}/episodes`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}/episodes`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -94,8 +102,13 @@ app.get('/episodes', async (req, res) => {
 // GET /anime/:id - Fetch anime details
 app.get('/anime/:id', async (req, res) => {
   const id = req.params.id;
+  // Security: Validate anime ID to prevent upstream URL manipulation / path traversal
+  if (!id || !isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Anime id parameter must be a positive integer' });
+  }
+
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -113,11 +126,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Anime Stream Backend is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
-  console.log(`📡 Endpoints available:`);
-  console.log(`   GET /trending`);
-  console.log(`   GET /search?q=<query>`);
-  console.log(`   GET /episodes?id=<anime_id>`);
-  console.log(`   GET /health`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
+    console.log(`📡 Endpoints available:`);
+    console.log(`   GET /trending`);
+    console.log(`   GET /search?q=<query>`);
+    console.log(`   GET /episodes?id=<anime_id>`);
+    console.log(`   GET /health`);
+  });
+}
+
+module.exports = { app, isValidAnimeId };
