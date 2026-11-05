@@ -11,6 +11,9 @@ app.use(express.json());
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
 
+// Security: Helper to validate positive integer IDs to prevent path traversal / SSRF / injection
+const isValidId = (id) => typeof id === 'string' && /^\d+$/.test(id.trim());
+
 // Helper function to add delay to avoid rate limiting
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -27,10 +30,9 @@ app.get('/trending', async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error('Error fetching trending anime:', error.message);
-    // Return fallback data if API fails
+    // Return fallback data without leaking internal error details
     res.status(500).json({
-      error: 'Failed to fetch trending anime',
-      message: error.message
+      error: 'Failed to fetch trending anime'
     });
   }
 });
@@ -38,14 +40,19 @@ app.get('/trending', async (req, res) => {
 // GET /search?q= - Search anime
 app.get('/search', async (req, res) => {
   const query = req.query.q;
-  if (!query) {
-    return res.status(400).json({ error: 'Query parameter q is required' });
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'Query parameter q is required and must be a string' });
+  }
+
+  // Security: Enforce input length limits to mitigate DoS / abuse
+  if (query.trim().length > 100) {
+    return res.status(400).json({ error: 'Query parameter q must not exceed 100 characters' });
   }
 
   try {
     const response = await axios.get(`${JIKAN_BASE}/anime`, {
       params: {
-        q: query,
+        q: query.trim(),
         limit: 20,
         sfw: true
       },
@@ -54,9 +61,9 @@ app.get('/search', async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error('Error searching anime:', error.message);
+    // Generic error message to prevent information leakage
     res.status(500).json({
-      error: 'Failed to search anime',
-      message: error.message
+      error: 'Failed to search anime'
     });
   }
 });
@@ -68,8 +75,13 @@ app.get('/episodes', async (req, res) => {
     return res.status(400).json({ error: 'Query parameter id is required' });
   }
 
+  // Security: Validate id is a strictly positive integer to prevent path traversal or SSRF
+  if (!isValidId(id)) {
+    return res.status(400).json({ error: 'Invalid anime ID. Must be a positive integer.' });
+  }
+
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}/episodes`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}/episodes`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -94,16 +106,22 @@ app.get('/episodes', async (req, res) => {
 // GET /anime/:id - Fetch anime details
 app.get('/anime/:id', async (req, res) => {
   const id = req.params.id;
+
+  // Security: Validate id parameter to prevent path traversal or SSRF
+  if (!isValidId(id)) {
+    return res.status(400).json({ error: 'Invalid anime ID. Must be a positive integer.' });
+  }
+
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}`, {
       timeout: 10000
     });
     res.json(response.data);
   } catch (error) {
     console.error('Error fetching anime details:', error.message);
+    // Generic error message to prevent information leakage
     res.status(500).json({
-      error: 'Failed to fetch anime details',
-      message: error.message
+      error: 'Failed to fetch anime details'
     });
   }
 });
