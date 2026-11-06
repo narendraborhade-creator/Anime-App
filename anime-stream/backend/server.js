@@ -3,7 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Enable CORS for all origins
 app.use(cors());
@@ -61,15 +61,22 @@ app.get('/search', async (req, res) => {
   }
 });
 
+// Security helper: Validate that anime ID is a positive integer
+// Protects against path traversal and SSRF when interpolating into upstream API URLs
+const isValidAnimeId = (id) => typeof id === 'string' && /^\d+$/.test(id.trim());
+
 // GET /episodes?id= - Fetch episodes for an anime
 app.get('/episodes', async (req, res) => {
   const id = req.query.id;
   if (!id) {
     return res.status(400).json({ error: 'Query parameter id is required' });
   }
+  if (!isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Invalid anime ID. ID must be a positive integer.' });
+  }
 
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}/episodes`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}/episodes`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -94,8 +101,12 @@ app.get('/episodes', async (req, res) => {
 // GET /anime/:id - Fetch anime details
 app.get('/anime/:id', async (req, res) => {
   const id = req.params.id;
+  if (!isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Invalid anime ID. ID must be a positive integer.' });
+  }
+
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}`, {
       timeout: 10000
     });
     res.json(response.data);
