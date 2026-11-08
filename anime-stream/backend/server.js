@@ -35,11 +35,16 @@ app.get('/trending', async (req, res) => {
   }
 });
 
+// Security helpers: validate positive integer IDs and search query bounds
+// Defense rationale: prevents path traversal / SSRF injection against upstream API and DoS via unbounded queries
+const isValidId = (id) => typeof id === 'string' && /^\d+$/.test(id);
+const isValidSearchQuery = (q) => typeof q === 'string' && q.trim().length > 0 && q.length <= 100;
+
 // GET /search?q= - Search anime
 app.get('/search', async (req, res) => {
   const query = req.query.q;
-  if (!query) {
-    return res.status(400).json({ error: 'Query parameter q is required' });
+  if (!query || !isValidSearchQuery(query)) {
+    return res.status(400).json({ error: 'Query parameter q is required and must not exceed 100 characters' });
   }
 
   try {
@@ -64,8 +69,8 @@ app.get('/search', async (req, res) => {
 // GET /episodes?id= - Fetch episodes for an anime
 app.get('/episodes', async (req, res) => {
   const id = req.query.id;
-  if (!id) {
-    return res.status(400).json({ error: 'Query parameter id is required' });
+  if (!id || !isValidId(id)) {
+    return res.status(400).json({ error: 'Valid numeric parameter id is required' });
   }
 
   try {
@@ -94,6 +99,9 @@ app.get('/episodes', async (req, res) => {
 // GET /anime/:id - Fetch anime details
 app.get('/anime/:id', async (req, res) => {
   const id = req.params.id;
+  if (!isValidId(id)) {
+    return res.status(400).json({ error: 'Valid numeric anime id is required' });
+  }
   try {
     const response = await axios.get(`${JIKAN_BASE}/anime/${id}`, {
       timeout: 10000
@@ -113,11 +121,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Anime Stream Backend is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
-  console.log(`📡 Endpoints available:`);
-  console.log(`   GET /trending`);
-  console.log(`   GET /search?q=<query>`);
-  console.log(`   GET /episodes?id=<anime_id>`);
-  console.log(`   GET /health`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
+    console.log(`📡 Endpoints available:`);
+    console.log(`   GET /trending`);
+    console.log(`   GET /search?q=<query>`);
+    console.log(`   GET /episodes?id=<anime_id>`);
+    console.log(`   GET /health`);
+  });
+}
+
+module.exports = app;
