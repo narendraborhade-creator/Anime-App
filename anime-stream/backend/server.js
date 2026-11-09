@@ -14,6 +14,9 @@ const JIKAN_BASE = 'https://api.jikan.moe/v4';
 // Helper function to add delay to avoid rate limiting
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Security: Validate anime ID to strictly positive integer to prevent SSRF and path traversal
+const isValidAnimeId = (id) => typeof id === 'string' && /^\d+$/.test(id.trim());
+
 // GET /trending - Fetch trending/top anime
 app.get('/trending', async (req, res) => {
   try {
@@ -38,8 +41,13 @@ app.get('/trending', async (req, res) => {
 // GET /search?q= - Search anime
 app.get('/search', async (req, res) => {
   const query = req.query.q;
-  if (!query) {
+  if (!query || typeof query !== 'string') {
     return res.status(400).json({ error: 'Query parameter q is required' });
+  }
+
+  // Security: Limit query length to prevent DoS via excessively large payloads
+  if (query.trim().length > 100) {
+    return res.status(400).json({ error: 'Query parameter q exceeds maximum length of 100 characters' });
   }
 
   try {
@@ -64,12 +72,12 @@ app.get('/search', async (req, res) => {
 // GET /episodes?id= - Fetch episodes for an anime
 app.get('/episodes', async (req, res) => {
   const id = req.query.id;
-  if (!id) {
-    return res.status(400).json({ error: 'Query parameter id is required' });
+  if (!id || !isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Valid numeric anime ID is required' });
   }
 
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}/episodes`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}/episodes`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -94,8 +102,12 @@ app.get('/episodes', async (req, res) => {
 // GET /anime/:id - Fetch anime details
 app.get('/anime/:id', async (req, res) => {
   const id = req.params.id;
+  if (!id || !isValidAnimeId(id)) {
+    return res.status(400).json({ error: 'Valid numeric anime ID is required' });
+  }
+
   try {
-    const response = await axios.get(`${JIKAN_BASE}/anime/${id}`, {
+    const response = await axios.get(`${JIKAN_BASE}/anime/${encodeURIComponent(id.trim())}`, {
       timeout: 10000
     });
     res.json(response.data);
@@ -113,11 +125,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Anime Stream Backend is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
-  console.log(`📡 Endpoints available:`);
-  console.log(`   GET /trending`);
-  console.log(`   GET /search?q=<query>`);
-  console.log(`   GET /episodes?id=<anime_id>`);
-  console.log(`   GET /health`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Anime Stream Backend running on http://localhost:${PORT}`);
+    console.log(`📡 Endpoints available:`);
+    console.log(`   GET /trending`);
+    console.log(`   GET /search?q=<query>`);
+    console.log(`   GET /episodes?id=<anime_id>`);
+    console.log(`   GET /health`);
+  });
+}
+
+module.exports = { app, isValidAnimeId };
