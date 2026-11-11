@@ -1,0 +1,4 @@
+## 2026-03-06 - Upstream Proxy URL Manipulation and Path Traversal
+**Vulnerability:** The Express proxy backend directly concatenated untrusted user inputs (`req.query.id`, `req.params.id`) into outgoing upstream API request URLs (`${JIKAN_BASE}/anime/${id}`). An attacker could supply path traversal sequences (`..%2F`) or malicious path segments to manipulate the upstream request target (SSRF / path traversal). Additionally, unconstrained search queries created unnecessary load / DoS risks.
+**Learning:** Upstream API proxy endpoints must never trust client-supplied identifiers as verbatim URL path segments, even when forwarding to trusted 3rd-party APIs like Jikan.
+**Prevention:** Strictly validate identifier parameters against an allowlist pattern (such as `/^\d+$/` for numeric IDs) and enforce strict bounds on string queries prior to making upstream HTTP requests.
