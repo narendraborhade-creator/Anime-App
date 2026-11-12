@@ -1,0 +1,4 @@
+## 2025-05-18 - Input Validation & Path Traversal / SSRF Prevention in Upstream Proxy Routes
+**Vulnerability:** User inputs (`req.query.id` and `req.params.id`) were interpolated directly into outbound Axios requests to third-party Jikan API endpoints without strict numeric validation or URL encoding. This allowed path manipulation/traversal payloads (e.g., `../`) and query injections against upstream services.
+**Learning:** Proxy endpoints that delegate requests to third-party or internal upstream APIs often assume user parameters match target resource schemas. Without upfront validation and encoding, user inputs can rewrite downstream path hierarchies or endpoints.
+**Prevention:** Strictly validate input formats (e.g. positive integer check `/^\d+$/` for entity IDs) before issuing upstream HTTP requests, encode components (`encodeURIComponent`), and return standard 400 Bad Request responses on invalid inputs.
